@@ -1,0 +1,99 @@
+Confidential File System Project - C++ with PostgreSQL
+Project Overview:
+ building a secure, confidential file management system using C++ and
+PostgreSQL.
+The goal is to simulate a government-grade file system that prioritizes access control, auditing, and
+data confidentiality. This system will include user authentication, file uploads/downloads, encryption,
+audit logs, and strict role-based access.
+----------------------------------------------------------------------------------------------------------------
+
+Goals:
+- Create a secure, multi-user file system.
+- Use PostgreSQL to manage user credentials, file metadata, access logs, and permissions.
+- Implement file encryption and restricted access mechanisms.
+- Provide a command-line interface for administrative and user interaction.
+Functional Requirements:
+1. User Management
+- Register new users with secure password hashing (SHA-256 or bcrypt).
+- Login system that verifies hashed credentials stored in PostgreSQL.
+- Enforce unique usernames and assign roles: 'admin' or 'user'.
+
+2. File Operations
+- Upload files with encryption (AES-256). File metadata is stored in the database.
+- Decrypt and download files only with proper access permissions.
+- Users can only see/download files they have been granted access to.
+- Files stored on disk with secure unique identifiers.
+
+3. Access Control
+- Admin users can assign file access permissions to users.
+- Access Control List (ACL) stored in PostgreSQL links users to files with roles like 'read', 'write'.
+- All access attempts must be verified through the database before proceeding.
+
+4. Logging and Auditing
+- All major actions (login, upload, download, permission changes) must be logged.
+- Each log entry includes:
+- Timestamp (UTC)
+- User ID
+- Action (e.g., LOGIN, UPLOAD, DENIED_ACCESS)
+- File ID (optional)
+- Status (SUCCESS or FAILURE)
+- Logs are write-only for users; admins can audit them.
+
+5. System Design and Security
+- Files stored encrypted using AES-256 via OpenSSL.
+- Validate all user inputs for type, length, and pattern.
+- Protect database queries against SQL injection using parameterized queries (libpq or pqxx).
+- PostgreSQL schema includes: users, files, permissions, and audit_logs.
+
+Technical Specifications:
+- Language: C++17 or newer.
+- Database: PostgreSQL 13+ with libpq or pqxx.
+- Libraries: OpenSSL (for AES encryption), pqxx/libpq (PostgreSQL connection).
+- Build system: CMake preferred; Makefile optional.
+- CLI interface via standard input/output; extensible to Qt GUI if desired.
+------------------------------------------------------------------------------------------------------
+
+Project File Structure:
+1. main.cpp
+- Entry point of the program. Handles argument parsing and CLI routing.
+2. database.cpp / database.hpp
+- Contains all PostgreSQL connection and query logic (e.g., authentication, logs, ACL checks).
+3. crypto.cpp / crypto.hpp
+- Manages AES encryption and decryption of files using OpenSSL.
+4. auth.cpp / auth.hpp
+- User registration, login verification, and password hashing.
+5. file_manager.cpp / file_manager.hpp
+- Handles file I/O, encryption, and local storage mapping.
+6. acl.cpp / acl.hpp
+- Access control logic for checking, assigning, and revoking permissions.
+7. logger.cpp / logger.hpp
+- Creates log entries and writes them securely to the database.
+PostgreSQL Database Schema:
+
+1. users (
+id SERIAL PRIMARY KEY,
+username TEXT UNIQUE NOT NULL,
+password_hash TEXT NOT NULL,
+role TEXT CHECK (role IN ('admin', 'user')) NOT NULL
+)
+2. files (
+id SERIAL PRIMARY KEY,
+filename TEXT NOT NULL,
+path TEXT NOT NULL,
+owner_id INT REFERENCES users(id),
+uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+3. permissions (
+id SERIAL PRIMARY KEY,
+file_id INT REFERENCES files(id),
+user_id INT REFERENCES users(id),
+access_type TEXT CHECK (access_type IN ('read', 'write'))
+)
+4. audit_logs (
+id SERIAL PRIMARY KEY,
+timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+user_id INT REFERENCES users(id),
+action TEXT NOT NULL,
+file_id INT,
+status TEXT CHECK (status IN ('SUCCESS', 'FAILURE'))
+)

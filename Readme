@@ -1,0 +1,102 @@
+# Confidential File System Project
+
+A secure, confidential file management system in C++ with PostgreSQL, simulating a government-grade file system with strong access control, auditing, and data confidentiality.
+
+## Features
+
+- **User Management:**  
+  - Register/login with secure password hashing (SHA-256 or bcrypt)
+  - Unique usernames, roles: `admin` or `user`
+- **File Operations:**  
+  - Upload/download files with AES-256 encryption (OpenSSL)
+  - File metadata stored in PostgreSQL
+  - Access control: users see/download only permitted files
+  - Files stored on disk with secure unique identifiers
+- **Access Control:**  
+  - Admins assign file permissions (`read`, `write`)
+  - Access Control List (ACL) in PostgreSQL
+  - All access attempts verified via database
+- **Logging & Auditing:**  
+  - All major actions logged (login, upload, download, permission changes)
+  - Logs include timestamp, user ID, action, file ID (optional), status
+  - Logs are write-only for users; admins can audit
+
+## Technical Specifications
+
+- **Language:** C++17 or newer
+- **Database:** PostgreSQL 13+ (libpq or pqxx)
+- **Encryption:** OpenSSL (AES-256)
+- **Build System:** CMake (preferred) or Makefile
+- **CLI:** Standard input/output (extensible to Qt GUI)
+
+## Project Structure
+
+- `main.cpp` — Entry point, CLI routing
+- `database.cpp/.hpp` — PostgreSQL connection, queries (auth, logs, ACL)
+- `crypto.cpp/.hpp` — AES encryption/decryption (OpenSSL)
+- `auth.cpp/.hpp` — Registration, login, password hashing
+- `file_manager.cpp/.hpp` — File I/O, encryption, storage mapping
+- `acl.cpp/.hpp` — Access control logic
+- `logger.cpp/.hpp` — Logging to database
+
+## Database Schema
+
+```sql
+-- users
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  role TEXT CHECK (role IN ('admin', 'user')) NOT NULL
+);
+
+-- files
+CREATE TABLE files (
+  id SERIAL PRIMARY KEY,
+  filename TEXT NOT NULL,
+  path TEXT NOT NULL,
+  owner_id INT REFERENCES users(id),
+  uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- permissions
+CREATE TABLE permissions (
+  id SERIAL PRIMARY KEY,
+  file_id INT REFERENCES files(id),
+  user_id INT REFERENCES users(id),
+  access_type TEXT CHECK (access_type IN ('read', 'write'))
+);
+
+-- audit_logs
+CREATE TABLE audit_logs (
+  id SERIAL PRIMARY KEY,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  user_id INT REFERENCES users(id),
+  action TEXT NOT NULL,
+  file_id INT,
+  status TEXT CHECK (status IN ('SUCCESS', 'FAILURE'))
+);
+```
+
+## Security
+
+- All files encrypted with AES-256 (OpenSSL)
+- All user input validated (type, length, pattern)
+- SQL injection protection via parameterized queries
+- Strict role-based access enforced
+
+## Building
+
+1. Install dependencies: PostgreSQL, OpenSSL, CMake, pqxx/libpq
+2. Configure database using the schema above
+3. Build with CMake:
+   ```sh
+   mkdir build && cd build
+   cmake ..
+   make
+   ```
+4. Run the CLI executable
+
+## License
+
+Confidential — For demonstration and educational use only.
