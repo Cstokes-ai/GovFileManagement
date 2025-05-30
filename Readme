@@ -99,4 +99,8 @@ CREATE TABLE audit_logs (
 
 ## License
 
-Confidential — For demonstration and educational use only.
+MIT License (MIT)
+## Contributing
+Contributions are welcome! Please submit issues or pull requests for enhancements, bug fixes, or documentation improvements.
+## Contact
+For questions or feedback, please open an issue on the GitHub repository or contact the project maintainers.
