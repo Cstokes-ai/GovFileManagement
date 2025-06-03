@@ -85,6 +85,18 @@ CREATE TABLE audit_logs (
 - SQL injection protection via parameterized queries
 - Strict role-based access enforced
 
+## Dependencies
+
+This project uses [vcpkg](https://github.com/microsoft/vcpkg) for dependency management.  
+Please install vcpkg and run:
+
+
+    git clone (https://github.com/microsoft/vcpkg.git
+    vcpkg install libpqxx
+This will install the required libraries for PostgreSQL conenctivity.
+
+before building.
+
 ## Building
 
 1. Install dependencies: PostgreSQL, OpenSSL, CMake, pqxx/libpq
