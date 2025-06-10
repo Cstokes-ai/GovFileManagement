@@ -7,20 +7,33 @@
 #include <vector>
 #include <iostream>
 #include <cstring>
+#include <algorithm> // for std::min
 
 
 class Crypto {
     public:
     void encryption(const std::string& input_path, const std::string& output_path){
-        // this function encrypts the file at input before storage
         AES_KEY encryption_key;
-        unsigned char key[AES_BLOCK_SIZE] = {0}; // AES_BLOCK_SIZE is 16 bytes
+        unsigned char key[32] = {0}; // 256-bit key for AES-256
         unsigned char iv[AES_BLOCK_SIZE] = {0}; // Initialization vector
-        //generate a random key
+
+        // Generate a random key
         if (!RAND_bytes(key, sizeof(key))) {
             throw std::runtime_error("Failed to generate random key");
 
         }
+        // Generate a random IV
+        if (!RAND_bytes(iv, sizeof(iv))) {
+            throw std::runtime_error("Failed to generate random IV");
+        }
+        //key handling, store it securely file.
+        std::ofstream key_file("encryption_key.bin", std::ios::binary);
+        if (!key_file) {
+            throw std::runtime_error("Failed to open key file for writing");
+        }
+        key_file.write(reinterpret_cast<const char*>(key), sizeof(key));
+        key_file.close();
+
         // Set the encryption keY
         if (AES_set_encrypt_key(key, 256, &encryption_key) < 0) {
             throw std::runtime_error("Failed to set encryption key");
@@ -38,6 +51,10 @@ class Crypto {
         if (!output_file) {
             throw std::runtime_error("Failed to open output file");
         }
+
+        // Write IV at the beginning of the file for later decryption
+        output_file.write(reinterpret_cast<const char*>(iv), AES_BLOCK_SIZE);
+
         // Encrypt the data in blocks
         size_t num_blocks = (buffer.size() + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE;
         for (size_t i = 0; i < num_blocks; ++i) {
@@ -48,13 +65,58 @@ class Crypto {
             output_file.write(reinterpret_cast<const char*>(block), AES_BLOCK_SIZE);
         }
         output_file.close();
-    }
-    /*
-    
-    Securely handle or store the key and IV so you can decrypt later (or pass them to the decryption function as needed).
-Implement the decryption function to reverse the process: read t
-he encrypted file, decrypt it with the correct key/IV, and write the original data to an output file.
-Handle errors and edge cases (file not found, encryption/decryption failures, etc.).
 
-    */
-}
+        // NOTE: In a real system, you must securely store or transmit the key and IV for decryption.
+        // Here, the IV is stored at the start of the output file, but the key must be managed securely.
+    }
+    void decryption(const std::string& encrypted_path, const std::string& output_path) {
+        AES_KEY decryption_key;
+        unsigned char key[32] = {0}; // 256-bit key for AES-256
+        unsigned char iv[AES_BLOCK_SIZE] = {0}; // Initialization vector
+
+        // Read the IV from the beginning of the encrypted file
+        std::ifstream input_file(encrypted_path, std::ios::binary);
+        if (!input_file) {
+            throw std::runtime_error("Failed to open encrypted file");
+        }
+        input_file.read(reinterpret_cast<char*>(iv), AES_BLOCK_SIZE);
+
+        // Set the decryption key (the key must be securely managed)
+        if (AES_set_decrypt_key(key, 256, &decryption_key) < 0) {
+            throw std::runtime_error("Failed to set decryption key");
+        }
+        /*
+        Key Retrieval:
+Before setting the decryption key, you should:
+Accept the key as a function parameter,
+Or load it from a secure location (file, user input, etc.).
+        */
+       // in this i am loading the key from a file
+       std::ifstream key_file("encryption_key.bin", std::ios::binary);
+        if (!key_file) {
+            throw std::runtime_error("Failed to open key file");
+        }
+
+        // Read the encrypted data
+        std::vector<unsigned char> buffer((std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
+        input_file.close();
+
+        // Write the decrypted contents to the output file
+        std::ofstream output_file(output_path, std::ios::binary);
+        if (!output_file) {
+            throw std::runtime_error("Failed to open output file");
+        }
+
+        // Decrypt the data in blocks
+        size_t num_blocks = (buffer.size() + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE;
+        for (size_t i = 0; i < num_blocks; ++i) {
+            unsigned char block[AES_BLOCK_SIZE] = {0};
+            size_t block_size = std::min(AES_BLOCK_SIZE, buffer.size() - i * AES_BLOCK_SIZE);
+            std::memcpy(block, buffer.data() + i * AES_BLOCK_SIZE, block_size);
+            AES_cbc_encrypt(block, block, AES_BLOCK_SIZE, &decryption_key, iv, AES_DECRYPT);
+            output_file.write(reinterpret_cast<const char*>(block), block_size);
+        }
+        output_file.close();
+    }
+    
+};
