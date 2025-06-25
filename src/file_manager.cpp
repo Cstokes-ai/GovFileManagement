@@ -12,6 +12,8 @@
 #include "crypto.hpp"
 #include <dirent.h>
 #include <sys/stat.h>
+#include <unistd.h> // For access, R_OK, W_OK
+#include <sys/types.h> // For struct dirent
 // all files communicate with one another for the application to work properly
 using namespace std::string_literals;
 std::vector<unsigned char> encrypt(const std::vector<char>& buffer);
@@ -75,18 +77,10 @@ class file_manager {
 
     void listFile() const {
         std::cout << "Listing files in the current directory: " << std::endl;
-        DIR *dir;
-        struct dirent *ent;
-        if ((dir = opendir(".")) != nullptr) {
-            while ((ent = readdir(dir)) != nullptr) {
-                // Only print regular files (not directories)
-                if (ent->d_type == DT_REG) {
-                    std::cout << ent->d_name << std::endl;
-                }
+        for (const auto& entry : std::filesystem::directory_iterator(".")) {
+            if (entry.is_regular_file()) {
+                std::cout << entry.path().filename().string() << std::endl;
             }
-            closedir(dir);
-        } else {
-            std::cerr << "Could not open current directory." << std::endl;
         }
     }
     void getFileInfo(const std::string &fileName) const {
@@ -99,16 +93,18 @@ class file_manager {
         std::cout << "Size: " << fileStat.st_size << " bytes" << std::endl;
         std::cout << "Last modified: " << fileStat.st_mtime << std::endl;
     }
-    void permissions(const std::string &fileName, const std::string &permissionType){
+    void permissions(const std::string &fileName, const std::string &permissionType) {
         std::string encFile = fileName + ".enc";
+        std::filesystem::perms p = std::filesystem::status(encFile).permissions();
+
         if (permissionType == "read") {
-            if (access(encFile.c_str(), R_OK) == 0) {
+            if ((p & std::filesystem::perms::owner_read) != std::filesystem::perms::none) {
                 std::cout << "Read permission granted for: " << encFile << std::endl;
             } else {
                 std::cerr << "Read permission denied for: " << encFile << std::endl;
             }
         } else if (permissionType == "write") {
-            if (access(encFile.c_str(), W_OK) == 0) {
+            if ((p & std::filesystem::perms::owner_write) != std::filesystem::perms::none) {
                 std::cout << "Write permission granted for: " << encFile << std::endl;
             } else {
                 std::cerr << "Write permission denied for: " << encFile << std::endl;
