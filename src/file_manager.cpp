@@ -3,7 +3,6 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
-#include <string>
 #include <cstdio> // for std::remove
 #include <filesystem>
 #include <algorithm> // for std::min
@@ -13,9 +12,10 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h> // For access, R_OK, W_OK
-#include <sys/types.h> // For struct dirent
-// all files communicate with one another for the application to work properly
-using namespace std::string_literals;
+
+// Ensure all string literals are explicitly suffixed with std::string_literals where needed.
+
+// Ensure all files communicate properly
 std::vector<unsigned char> encrypt(const std::vector<char>& buffer);
 std::vector<unsigned char> decrypt(const std::vector<char>& buffer);
 

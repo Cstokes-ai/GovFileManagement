@@ -2,13 +2,20 @@
 #include "crypto.hpp"
 #include <openssl/aes.h>
 #include <openssl/rand.h>
+#include <openssl/sha.h> // Example for hashing
 #include <fstream>
 #include <stdexcept>
 #include <vector>
 #include <iostream>
 #include <cstring>
 #include <algorithm> // for std::min
+#include <sstream>
+#include <iomanip>
 
+// Define a custom inline function to replace std::min
+inline size_t custom_min(size_t a, size_t b) {
+    return (a < b) ? a : b;
+}
 
 class Crypto {
     public:
@@ -59,7 +66,7 @@ class Crypto {
         size_t num_blocks = (buffer.size() + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE;
         for (size_t i = 0; i < num_blocks; ++i) {
             unsigned char block[AES_BLOCK_SIZE] = {0};
-            size_t block_size = std::min(AES_BLOCK_SIZE, buffer.size() - i * AES_BLOCK_SIZE);
+            size_t block_size = custom_min(static_cast<size_t>(AES_BLOCK_SIZE), buffer.size() - i * AES_BLOCK_SIZE);
             std::memcpy(block, buffer.data() + i * AES_BLOCK_SIZE, block_size);
             AES_cbc_encrypt(block, block, AES_BLOCK_SIZE, &encryption_key, iv, AES_ENCRYPT);
             output_file.write(reinterpret_cast<const char*>(block), AES_BLOCK_SIZE);
@@ -111,12 +118,23 @@ Or load it from a secure location (file, user input, etc.).
         size_t num_blocks = (buffer.size() + AES_BLOCK_SIZE - 1) / AES_BLOCK_SIZE;
         for (size_t i = 0; i < num_blocks; ++i) {
             unsigned char block[AES_BLOCK_SIZE] = {0};
-            size_t block_size = std::min(AES_BLOCK_SIZE, buffer.size() - i * AES_BLOCK_SIZE);
+            size_t block_size = custom_min(AES_BLOCK_SIZE, buffer.size() - i * AES_BLOCK_SIZE);
             std::memcpy(block, buffer.data() + i * AES_BLOCK_SIZE, block_size);
             AES_cbc_encrypt(block, block, AES_BLOCK_SIZE, &decryption_key, iv, AES_DECRYPT);
             output_file.write(reinterpret_cast<const char*>(block), block_size);
         }
         output_file.close();
+    }
+
+    std::string hashPassword(const std::string &password) {
+        unsigned char hash[SHA256_DIGEST_LENGTH];
+        SHA256(reinterpret_cast<const unsigned char*>(password.c_str()), password.size(), hash);
+
+        std::ostringstream oss;
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; ++i) {
+            oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
+        }
+        return oss.str();
     }
     
 };

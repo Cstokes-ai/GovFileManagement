@@ -31,6 +31,7 @@ class Crypto {
     public:
     void encryption(const std::string& input_path, const std::string& output_path);
     void decryption(const std::string& encrypted_path, const std::string& output_path);
+    static std::string hashPassword(const std::string &password); // Add this declaration
 };
 
 #endif // CRYPTO_HPP

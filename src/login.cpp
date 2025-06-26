@@ -11,10 +11,33 @@
 #include "file_manager.hpp"
 #include "acl.hpp"
 
+class Login {
+private:
+    Database db_; // Declare the db_ object
+
+public:
+    Login() {
+        db_.connect("host=localhost port=5432 dbname=yourdb user=youruser password=yourpass");
+    }
+
+    void registerUser(const std::string &username, const std::string &password) {
+        if (username.empty() || password.empty()) {
+            throw std::invalid_argument("Username and password cannot be empty.");
+        }
+        // Check if user exists in the database
+        auto user = db_.fetchUserByUsername(username);
+        if (!user.empty()) {
+            throw std::runtime_error("Username already exists.");
+        }
+        std::string hashPassword = Crypto::hashPassword(password); // Ensure Crypto::hashPassword exists
+        db_.executeQuery("INSERT INTO users (username, password) VALUES ($1, $2)", {username, hashPassword});
+    }
+};
+
 // Remove the class definition here; implement methods from login.hpp instead
 
 // Example: create a Database object and connect in your Login class constructor
-Login::Login() {
+/*Login::Login() {
     db_.connect("host=localhost port=5432 dbname=yourdb user=youruser password=yourpass");
 }
 
@@ -33,4 +56,4 @@ void Login::registerUser(const std::string &username, const std::string &passwor
     db_.executeQuery("INSERT INTO users (username, password) VALUES ($1, $2)", {username, hashPassword});
 }
 
-// ...implement other Login methods using db_ as needed...
+// ...implement other Login methods using db_ as needed...*/
