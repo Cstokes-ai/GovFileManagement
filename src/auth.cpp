@@ -19,28 +19,100 @@
 class Auth {
     public:
 
-    //register a new user
-    void registerUser(const std::string &username, const std::string &password){
-        // Check if username and password are not empty
-        if (username.empty() || password.empty()) {
-            throw std::invalid_argument("Username and password is empty");
+    // Register a new user
+    void registerUser(const std::string &username, const std::string &password) {
+        validateInput(username, password);
 
-        }
-        //check if the user is in the database already
         Database db;
         db.connect("host=localhost port=5432 dbname=yourdb user=youruser password=yourpass");
+
         auto user = db.fetchUserByUsername(username);
-        if(!user.empty()){
+        if (!user.empty()) {
             throw std::runtime_error("Username already exists");
         }
-        //hash the password
+
         std::string hashPassword = Crypto::hashPassword(password);
-        //store into database
-        db.executeQuery("INSERT INTO users (username, password) VALUES ($1, $2)", {username, hashPassword});    
-        
+        db.executeQuery("INSERT INTO users (username, password) VALUES ($1, $2)", {username, hashPassword});
 
-
+        std::cout << "User registered successfully." << std::endl;
     }
-    //authenticate a user
-    bool authenticateUser(const std::string &username, const std::string &password);
+
+    // Verify user login
+    bool verifyLogin(const std::string &username, const std::string &password) {
+        validateInput(username, password);
+
+        Database db;
+        db.connect("host=localhost port=5432 dbname=yourdb user=youruser password=yourpass");
+
+        auto user = db.fetchUserByUsername(username);
+        if (user.empty()) {
+            throw std::runtime_error("User does not exist");
+        }
+
+        // Access the password field using the correct index
+        std::string storedHashedPassword = user.at(1); // Assuming password is the second column
+        return verifyPassword(password, storedHashedPassword);
+    }
+
+    // Verify a password against a hashed password
+    bool verifyPassword(const std::string &password, const std::string &hashedPassword) {
+        if (password.empty() || hashedPassword.empty()) {
+            throw std::invalid_argument("Password and hashed password cannot be empty");
+        }
+
+        return Crypto::hashPassword(password) == hashedPassword;
+    }
+
+    // Reset a user's password
+    void resetPassword(const std::string &username, const std::string &newPassword) {
+        validateInput(username, newPassword);
+
+        Database db;
+        db.connect("host=localhost port=5432 dbname=yourdb user=youruser password=yourpass");
+
+        auto user = db.fetchUserByUsername(username);
+        if (user.empty()) {
+            throw std::runtime_error("User does not exist");
+        }
+
+        std::string hashPassword = Crypto::hashPassword(newPassword);
+        db.executeQuery("UPDATE users SET password = $1 WHERE username = $2", {hashPassword, username});
+
+        std::cout << "Password reset successfully." << std::endl;
+    }
+
+    // Generate a secure token for password reset
+    std::string generateResetToken(const std::string &username) {
+        if (username.empty()) {
+            throw std::invalid_argument("Username cannot be empty");
+        }
+
+        // Example token generation logic (use a secure method in production)
+        std::string token = Crypto::hashPassword(username + std::to_string(std::time(nullptr)));
+
+        std::cout << "Reset token generated: " << token << std::endl;
+        return token;
+    }
+
+    // Validate a password reset token
+    bool validateResetToken(const std::string &username, const std::string &token) {
+        if (username.empty() || token.empty()) {
+            throw std::invalid_argument("Username and token cannot be empty");
+        }
+
+        // Example validation logic (use a secure method in production)
+        std::string expectedToken = Crypto::hashPassword(username + std::to_string(std::time(nullptr)));
+        return token == expectedToken;
+    }
+
+private:
+    // Common input validation logic
+    void validateInput(const std::string &username, const std::string &password) {
+        if (username.empty() || password.empty()) {
+            throw std::invalid_argument("Username and password cannot be empty");
+        }
+    }
 };
+
+
+

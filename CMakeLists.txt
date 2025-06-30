@@ -8,9 +8,10 @@ set(CMAKE_AUTORCC ON)
 
 # Tell CMake where to find Qt 6
 set(CMAKE_PREFIX_PATH "C:/Qt/6.9.1/mingw_64/lib/cmake")
+set(Qt6_DIR "C:/Qt/6.9.1/mingw_64/lib/cmake/Qt")
 
 # Find Qt6 Widgets module
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt REQUIRED COMPONENTS Widgets)
 
 # Find libpqxx (PostgreSQL C++ client library)
 find_package(PQXX REQUIRED)
